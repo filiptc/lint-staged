@@ -115,7 +115,9 @@ module.exports = function resolveTaskFn(options) {
           throw makeErr(linter, result, ctx)
         }
 
-        return successMsg(linter)
+        const message = successMsg(linter);
+        subj.next(message);
+        return message;
       });
       return subj.asObservable().pipe(takeUntil(from(promise)));
     }
@@ -162,7 +164,9 @@ module.exports = function resolveTaskFn(options) {
           throw makeErr(linter, finalResult, ctx)
         }
 
-        return errors.map(err => err.stdout)
+        const message = successMsg(linter);
+        subj.next(message);
+        return message;
       });
     return subj.asObservable().pipe(takeUntil(from(promise)));
   };
