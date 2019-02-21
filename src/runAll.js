@@ -59,6 +59,7 @@ module.exports = function runAll(config) {
 
     const listrBaseOptions = {
       dateFormat: false,
+      collapse: false,
       renderer
     }
 

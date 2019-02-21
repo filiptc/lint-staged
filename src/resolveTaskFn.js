@@ -1,5 +1,7 @@
 'use strict'
 
+const { Subject, from } = require('rxjs');
+const { takeUntil } = require('rxjs/operators');
 const chunk = require('lodash/chunk')
 const dedent = require('dedent')
 const isWindows = require('is-windows')
@@ -104,34 +106,43 @@ module.exports = function resolveTaskFn(options) {
 
   if (!isWindows()) {
     debug('%s  OS: %s; File path chunking unnecessary', symbols.success, process.platform)
-    return ctx =>
-      execLinter(bin, args, execaOptions, pathsToLint).then(result => {
+    return ctx => {
+      const subj = new Subject();
+      const execution = execLinter(bin, args, execaOptions, pathsToLint);
+      execution.stdout.on('data', data => subj.next(data));
+      const promise = execution.then(result => {
         if (result.failed || result.killed || result.signal != null) {
           throw makeErr(linter, result, ctx)
         }
 
         return successMsg(linter)
-      })
+      });
+      return subj.asObservable().pipe(takeUntil(from(promise)));
+    }
   }
 
   const { chunkSize, subTaskConcurrency: concurrency } = options
 
   const filePathChunks = chunk(pathsToLint, calcChunkSize(pathsToLint, chunkSize))
-  const mapper = execLinter.bind(null, bin, args, execaOptions)
 
   debug(
     'OS: %s; Creating linter task with %d chunked file paths',
     process.platform,
     filePathChunks.length
   )
-  return ctx =>
-    pMap(filePathChunks, mapper, { concurrency })
+  return ctx => {
+    const subj = new Subject();
+    const promise = pMap(filePathChunks, filePathChunk => {
+      const execution = execLinter(bin, args, execaOptions, filePathChunk);
+      execution.stdout.on('data', data => subj.next(data));
+      return execution;
+    }, { concurrency })
       .catch(err => {
         /* This will probably never be called. But just in case.. */
         throw new Error(dedent`
-        ${symbols.error} ${linter} got an unexpected error.
-        ${err.message}
-      `)
+          ${symbols.error} ${linter} got an unexpected error.
+          ${err.message}
+        `)
       })
       .then(results => {
         const errors = results.filter(res => res.failed || res.killed)
@@ -151,6 +162,8 @@ module.exports = function resolveTaskFn(options) {
           throw makeErr(linter, finalResult, ctx)
         }
 
-        return successMsg(linter)
-      })
+        return errors.map(err => err.stdout)
+      });
+    return subj.asObservable().pipe(takeUntil(from(promise)));
+  };
 }

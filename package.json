@@ -10,7 +10,10 @@
     "Suhas Karanth <sudo.suhas@gmail.com>"
   ],
   "bin": "index.js",
-  "files": ["index.js", "src"],
+  "files": [
+    "index.js",
+    "src"
+  ],
   "scripts": {
     "cz": "git-cz",
     "lint:base": "eslint --rule \"prettier/prettier: 2\"",
@@ -47,6 +50,7 @@
     "path-is-inside": "^1.0.2",
     "pify": "^3.0.0",
     "please-upgrade-node": "^3.0.2",
+    "rxjs": "^6.4.0",
     "staged-git-files": "1.1.2",
     "string-argv": "^0.0.2",
     "stringify-object": "^3.2.2",
@@ -77,8 +81,12 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFiles": ["./testSetup.js"],
-    "snapshotSerializers": ["jest-snapshot-serializer-ansi"]
+    "setupFiles": [
+      "./testSetup.js"
+    ],
+    "snapshotSerializers": [
+      "jest-snapshot-serializer-ansi"
+    ]
   },
   "keywords": [
     "lint",
